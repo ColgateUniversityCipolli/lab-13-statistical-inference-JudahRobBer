@@ -218,6 +218,10 @@ Conduct the inferences they do in the paper. Make sure to report the results a l
 **Note**: Use the two-sided test.
 
 ```{r}
+#| echo: false
+#| label: tbl-inference-summaries
+#| tbl-cap: T-test Result Summaries
+
 gen_inferences = function(data,test,null) {
   results = t.test(x=data,mu=null,alternative=test)
   c.i = t.test(x=data,mu=null,alternative="two.sided")$conf.int
@@ -238,16 +242,18 @@ closer_inference = gen_inferences(data=fig2.dat$closer_vals,null=0,test="greater
 further_inference =  gen_inferences(data=fig2.dat$further_vals,null=0,test="less")
 diff_inference = gen_inferences(data=fig2.dat$diff,null=0,test="two.sided")
 
-inference_summary = bind_rows(
-  closer_inference |> mutate(variable = "Closer"),
+bind_rows(
+  closer_inference  |> mutate(variable = "Closer"),
   further_inference |> mutate(variable = "Further"),
-  diff_inference |> mutate(variable = "Paired Difference")
-) |> relocate(variable)
-
-(inference_summary)
-
+  diff_inference    |> mutate(variable = "Paired Difference")
+) |>
+  relocate(variable) |>
+  mutate(p.value = format(p.value, scientific = TRUE, digits = 3)) |>
+  knitr::kable()
 
 ```
+
+As shown in @tbl-inference-summaries the respective t tests were significant for all variables of interest. Suggesting that we have support for all of the stated alternative hypotheseses.
 
 ## Part e 
 
