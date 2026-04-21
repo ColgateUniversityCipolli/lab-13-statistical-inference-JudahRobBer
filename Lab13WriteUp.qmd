@@ -60,6 +60,7 @@ knitr::knit_hooks$set(chunk = function(x, options) {
 #| include: false
 library(tidyverse)
 library(patchwork)
+library(effectsize)
 ```
 
 # Remaining Portfolio Work!
@@ -114,8 +115,23 @@ That is, the unit of measure is the syllable as measured on six birds, and the m
 ## Part a
 Using the `pwr` package for \texttt{R} [@pwr], conduct a power analysis. How many observations would the researchers need to detect a moderate-to-large effect ($d=0.65$) when using $\alpha=0.05$ and default power (0.80) for a two-sided one sample $t$ test.
 
+**Solution** 
+```{r}
+ideal.sample.size = ceiling(power.t.test(d=.65,sig.level = .05, power = .8, type = "one.sample", alternative = "two.sided")$n)
+
+(ideal.sample.size)
+```
+
 ## Part b
 Click the link to go to the paper. Find the source data for Figure 2. Download the Excel file. Describe what you needed to do to collect the data for Figure 2(g). Note that you only need the `closer_vals` and `further_vals`. Ensure to `mutate()` the data to get a difference (e.g., `closer_vals - further_vals`).
+
+**Solution**
+I extracted the data from the sheets g.farther_vals and g.closer_vals into a separate excel sheet with two labeled columns, before extracting to a CSV file. We further add a difference column in `R` which creates the paired observation difference needed for the lines in figure 2g.
+
+```{r}
+fig2.dat = read_csv("fig_2_data.csv") |>
+  mutate(diff = closer_vals - further_vals)
+```
 
 ## Part c
 Summarize the data.
@@ -124,6 +140,71 @@ Summarize the data.
 * Summarize the closer data. Do the data suggest that dopamine in the brains of young zebra finches increases when they sing closer to their adult song?
 * Summarize the paired differences. Do the data suggest that there is a difference between dopamine in the brains of young zebra finches when they sing further away compared to closer to their adult song?
 * **Optional Challenge** Can you reproduce Figure 2(g)? Note that the you can use \texttt{geom\_errorbar()} to plot the range created by adding the mean $\pm$ one standard deviation.
+
+**Solution**
+
+```{r}
+#| label: fig-part-c-summary
+#| fig-cap: "Histograms of dopamine fluorescence change for further renditions (top-left), closer renditions (top-right), and paired differences (bottom)."
+#| fig-width: 8
+#| fig-height: 7
+
+further_summary <- fig2.dat |>
+  summarise(n = n(), mean = mean(further_vals), sd = sd(further_vals))
+
+closer_summary <- fig2.dat |>
+  summarise(n = n(), mean = mean(closer_vals), sd = sd(closer_vals))
+
+diff_summary <- fig2.dat |>
+  summarise(n = n(), mean = mean(diff), sd = sd(diff))
+
+gen_histogram = function(df, vals, summary, title, xlabel) {
+  ggplot(df, aes(x = .data[[vals]])) +
+    geom_histogram(bins = 10, color = "white") +
+    geom_vline(xintercept = summary$mean, linetype = "dashed", linewidth = 0.8) +
+    labs(
+      title = title,
+      subtitle = paste0("mean = ", round(summary$mean, 3),
+                        ", sd = ", round(summary$sd, 3)),
+      x = xlabel, y = "Count"
+    ) +
+    theme_bw()
+}
+
+further_plot = gen_histogram(fig2.dat, 
+                        vals = "further_vals", 
+                        summary = further_summary, 
+                        title = "Further", 
+                        xlabel = "% ΔF (further)")
+closer_plot  = gen_histogram(fig2.dat, 
+                        vals = "closer_vals", 
+                        summary = closer_summary,  
+                        title = "Closer",  
+                        xlabel = "% ΔF (closer)")
+diff_plot    = gen_histogram(fig2.dat, 
+                        vals = "diff",         
+                        summary = diff_summary,    
+                        title = "Paired Difference", 
+                        xlabel = "% ΔF (closer − further)")
+
+
+(further_plot + closer_plot) / diff_plot
+```
+
+```{r}
+#| echo: false
+#| label: tbl-numerical-summary
+#| tbl-cap: "Numerical summary of % Flourescence Difference"
+bind_rows(                                                                
+  further_summary |> mutate(variable = "Further"),                        
+  closer_summary  |> mutate(variable = "Closer"),                         
+  diff_summary   |> mutate(variable = "Paired Difference (Closer -  Further")                                                                      
+) |>                                                                      
+select(variable, n, mean, sd) |>                                        
+mutate(mean = round(mean,3), sd = round(sd,3)) |>                        
+knitr::kable(col.names = c("Variable", "n", "Mean", "SD")) 
+```
+
 
 ## Part d
 Conduct the inferences they do in the paper. Make sure to report the results a little more comprehensively -- that is your parenthetical should look something like: ($t=23.99$, $p<0.0001$; $g=1.34$; 95% CI: 4.43, 4.60). Ensure to verify any conditions for use.\
@@ -135,6 +216,38 @@ Conduct the inferences they do in the paper. Make sure to report the results a l
 **Note**: Use the appropriate one-sided test.
 * "The difference between populations was significant ($p=1.04 \times10^{-8}$).''\
 **Note**: Use the two-sided test.
+
+```{r}
+gen_inferences = function(data,test,null) {
+  results = t.test(x=data,mu=null,alternative=test)
+  c.i = t.test(x=data,mu=null,alternative="two.sided")$conf.int
+  p = results$p.value
+  t = results$statistic
+  g = hedges_g(x=data,mu=null)$Hedges_g
+  
+  df = tibble(
+    p.value = p,
+    t.statistic = t,
+    effect.size = g,
+    C.I.lower = c.i[1],
+    C.I.higher = c.i[2]
+  )
+}
+
+closer_inference = gen_inferences(data=fig2.dat$closer_vals,null=0,test="greater")
+further_inference =  gen_inferences(data=fig2.dat$further_vals,null=0,test="less")
+diff_inference = gen_inferences(data=fig2.dat$diff,null=0,test="two.sided")
+
+inference_summary = bind_rows(
+  closer_inference |> mutate(variable = "Closer"),
+  further_inference |> mutate(variable = "Further"),
+  diff_inference |> mutate(variable = "Paired Difference")
+) |> relocate(variable)
+
+(inference_summary)
+
+
+```
 
 ## Part e 
 
