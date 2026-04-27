@@ -156,13 +156,13 @@ Summarize the data.
 #| fig-height: 7
 #| echo: false
 
-further_summary <- fig2.dat |>
+further_summary = fig2.dat |>
   summarise(n = n(), mean = mean(further_vals), sd = sd(further_vals))
 
-closer_summary <- fig2.dat |>
+closer_summary = fig2.dat |>
   summarise(n = n(), mean = mean(closer_vals), sd = sd(closer_vals))
 
-diff_summary <- fig2.dat |>
+diff_summary = fig2.dat |>
   summarise(n = n(), mean = mean(diff), sd = sd(diff))
 
 gen_histogram = function(df, vals, summary, title, xlabel) {
@@ -288,7 +288,7 @@ make_t_plot = function(data, t_obs, alternative, title) {
   df = n - 1
 
   boot_t = replicate(B, {
-    x_star <- sample(data, size = n, replace = TRUE)
+    x_star = sample(data, size = n, replace = TRUE)
     mean(x_star) / (sd(x_star) / sqrt(n))
   })
 
@@ -299,17 +299,17 @@ make_t_plot = function(data, t_obs, alternative, title) {
   p = ggplot(null_df) +
     geom_line(aes(x = x, y = density)) +
     geom_density(
-      data      = tibble(t = boot_t),
+      data = tibble(t = boot_t),
       aes(x = t),
-      color     = "steelblue",
+      color = "steelblue",
       linetype  = "dashed",
       linewidth = 0.8
     ) +
     geom_hline(yintercept = 0) +
     labs(
-      title    = title,
-      x        = "t",
-      y        = "Density",
+      title = title,
+      x = "t",
+      y = "Density",
       subtitle = paste0("t = ", round(as.numeric(t_obs), 2))
     ) +
     coord_cartesian(xlim = c(-15, 15)) +
@@ -319,22 +319,22 @@ make_t_plot = function(data, t_obs, alternative, title) {
   red.hex = "#FF0000"
   alpha = .05
   if (alternative == "greater") {
-    t_crit <- qt(1 - alpha, df = df)
+    t_crit = qt(1 - alpha, df = df)
     p = p + geom_ribbon(
       data = filter(null_df, x >= t_crit),
       aes(x = x, ymin = 0, ymax = density),
       fill = red.hex, alpha = 0.3
     )
   } else if (alternative == "less") {
-    t_crit <- qt(alpha, df = df)
+    t_crit = qt(alpha, df = df)
     p = p + geom_ribbon(
       data = filter(null_df, x <= t_crit),
       aes(x = x, ymin = 0, ymax = density),
       fill = red.hex, alpha = 0.3
     )
   } else {
-    t_crit_lo <- qt(alpha / 2, df = df)
-    t_crit_hi <- qt(1 - (alpha / 2), df = df)
+    t_crit_lo = qt(alpha / 2, df = df)
+    t_crit_hi = qt(1 - (alpha / 2), df = df)
     p = p +
       geom_ribbon(
         data = filter(null_df, x <= t_crit_lo),
@@ -352,24 +352,24 @@ make_t_plot = function(data, t_obs, alternative, title) {
 }
 
 p_closer  = make_t_plot(
-  data        = fig2.dat$closer_vals,
-  t_obs       = closer_inference$t.statistic,
+  data = fig2.dat$closer_vals,
+  t_obs = closer_inference$t.statistic,
   alternative = "greater",
-  title       = "Closer Renditions (H: mu > 0)"
+  title = "Closer Renditions (H: mu > 0)"
 )
 
 p_further = make_t_plot(
-  data        = fig2.dat$further_vals,
-  t_obs       = further_inference$t.statistic,
+  data = fig2.dat$further_vals,
+  t_obs = further_inference$t.statistic,
   alternative = "less",
-  title       = "Further Renditions (H: mu < 0)"
+  title = "Further Renditions (H: mu < 0)"
 )
 
 p_diff = make_t_plot(
-  data        = fig2.dat$diff,
-  t_obs       = diff_inference$t.statistic,
+  data = fig2.dat$diff,
+  t_obs = diff_inference$t.statistic,
   alternative = "two.sided",
-  title       = "Paired Difference (Closer - Further) (H: mu != 0)"
+  title = "Paired Difference (Closer - Further) (H: mu != 0)"
 )
 
 p_closer / p_further / p_diff
